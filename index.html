@@ -16,13 +16,21 @@
             display: flex; justify-content: center; align-items: center; z-index: 100;
         }
         .admin-badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+        @media print { 
+            .no-print { display: none !important; } 
+            body { padding: 0; background: white; } 
+            .card { box-shadow: none; border: 1px solid #eee; margin-bottom: 0; }
+            .print-only { display: block !important; }
+        }
+        .print-header { display: none; }
+        @media print { .print-header { display: block; border-bottom: 2px solid #333; margin-bottom: 20px; padding-bottom: 10px; } }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <!-- Ecran Login -->
     <div id="authScreen" class="fixed inset-0 bg-slate-100 flex items-center justify-center p-4 z-[60]">
-        <div class="card w-full max-w-md p-8 border-t-4 border-blue-600">
+        <div class="card w-full max-w-md p-8 border-t-4 border-blue-600 shadow-2xl">
             <div class="text-center mb-8">
                 <div class="inline-block p-4 bg-blue-50 rounded-full mb-4">
                     <i class="fas fa-user-lock text-3xl text-blue-600"></i>
@@ -51,122 +59,156 @@
     <div id="loader" class="loading-overlay hidden">
         <div class="flex flex-col items-center gap-4">
             <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600"></i>
-            <p class="font-bold text-slate-600">Sincronizare Cloud...</p>
+            <p class="font-bold text-slate-600 uppercase text-xs tracking-widest">Sincronizare Cloud...</p>
         </div>
     </div>
 
     <!-- Aplicatie Principala -->
     <div id="appScreen" class="max-w-6xl mx-auto hidden">
         
-        <!-- Top Nav / Logout -->
+        <!-- Top Nav -->
         <div class="flex justify-between items-center mb-8 no-print">
             <div id="userGreeting" class="flex items-center gap-3 text-slate-600 font-bold text-sm">
-                <span>Salut, <span id="userEmailDisplay" class="text-blue-600 font-black">Utilizator</span></span>
-                <span id="adminTag" class="admin-badge hidden">Admin Suprem</span>
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div>
+                    <span class="block text-xs text-slate-400">Bine ai venit,</span>
+                    <span id="userEmailDisplay" class="text-slate-800 font-black">Utilizator</span>
+                </div>
+                <span id="adminTag" class="admin-badge hidden">Admin</span>
             </div>
-            <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-500 font-bold text-xs uppercase flex items-center gap-2">
+            <button onclick="handleLogout()" class="text-slate-400 hover:text-rose-500 font-bold text-xs uppercase flex items-center gap-2 transition">
                 Deconectare <i class="fas fa-sign-out-alt"></i>
             </button>
         </div>
 
         <!-- Bara Actiuni -->
         <div class="mb-6 flex flex-wrap items-center justify-between gap-4 no-print">
-            <div class="flex items-center gap-3">
-                <select id="carSelector" onchange="switchCar()" class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg p-2.5 font-bold shadow-sm">
+            <div class="flex items-center gap-2">
+                <select id="carSelector" onchange="switchCar()" class="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg p-2.5 font-bold shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
                 </select>
-                <button onclick="toggleCarModal()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Adaugă Mașină</span>
+                <button onclick="openCarModal('edit')" id="editCarBtn" class="bg-slate-200 text-slate-600 p-2.5 rounded-lg hover:bg-slate-300 transition" title="Editează mașina curentă">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="openCarModal('add')" class="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-md">
+                    <i class="fas fa-plus"></i> <span class="hidden sm:inline">Mașină Nouă</span>
                 </button>
             </div>
             <div class="flex items-center gap-4">
-                <button onclick="window.print()" class="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-black transition flex items-center gap-2">
-                    <i class="fas fa-print"></i> Printează
+                <button onclick="window.print()" class="bg-slate-800 text-white px-4 py-2.5 rounded-lg hover:bg-black transition flex items-center gap-2 shadow-md">
+                    <i class="fas fa-print"></i> Istoric Complet
                 </button>
-                <!-- Buton Stergere Masina (Doar Admin) -->
-                <button id="deleteCarBtn" onclick="deleteCurrentCar()" class="text-rose-500 hover:text-rose-700 p-2 hidden">
+                <button id="deleteCarBtn" onclick="deleteCurrentCar()" class="text-rose-500 hover:bg-rose-50 p-2.5 rounded-lg transition hidden">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
         </div>
 
-        <div id="carHeader" class="card p-6 mb-8 border-t-4 border-blue-600"></div>
+        <!-- Header Masina Dinamic -->
+        <div id="carHeader" class="card p-6 mb-8 border-t-4 border-blue-600 relative overflow-hidden">
+            <!-- Content injectat de JS -->
+        </div>
 
-        <!-- Statistici -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="card p-4 text-center border-b-4 border-green-500">
-                <p class="text-slate-400 text-[10px] uppercase font-bold">Total Investiții</p>
+        <!-- Statistici Dash -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 no-print">
+            <div class="card p-5 text-center border-b-4 border-emerald-500">
+                <p class="text-slate-400 text-[10px] uppercase font-black mb-1">Total Investit</p>
                 <h2 id="totalInvestit" class="text-xl font-black text-slate-800">0 RON</h2>
             </div>
-            <div class="card p-4 text-center border-b-4 border-blue-500">
-                <p class="text-slate-400 text-[10px] uppercase font-bold">Km Actuali</p>
+            <div class="card p-5 text-center border-b-4 border-blue-500">
+                <p class="text-slate-400 text-[10px] uppercase font-black mb-1">Km Actuali</p>
                 <h2 id="lastKm" class="text-xl font-black text-slate-800">0 KM</h2>
             </div>
-            <div class="card p-4 text-center border-b-4 border-orange-500">
-                <p class="text-slate-400 text-[10px] uppercase font-bold">Intervenții</p>
+            <div class="card p-5 text-center border-b-4 border-orange-500">
+                <p class="text-slate-400 text-[10px] uppercase font-black mb-1">Reparații</p>
                 <h2 id="countInterventii" class="text-xl font-black text-slate-800">0</h2>
             </div>
-            <div class="card p-4 text-center border-b-4 border-purple-500">
-                <p class="text-slate-400 text-[10px] uppercase font-bold">Revizii</p>
+            <div class="card p-5 text-center border-b-4 border-purple-500">
+                <p class="text-slate-400 text-[10px] uppercase font-black mb-1">Revizii Ok</p>
                 <h2 id="countRevizii" class="text-xl font-black text-slate-800">0</h2>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Formular Adaugare -->
+            <!-- Coloana Formular & Filtre -->
             <div class="lg:col-span-1 no-print">
-                <div class="card p-6 sticky top-8 border-2 border-transparent focus-within:border-blue-100 transition">
-                    <h3 class="text-lg font-bold mb-6 text-slate-800">Adaugă Înregistrare</h3>
-                    <form id="serviceForm" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tip</label>
-                            <select id="type" class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
-                                <option value="interventie">Intervenție</option>
-                                <option value="revizie">Revizie</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Descriere</label>
-                            <input type="text" id="desc" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none" placeholder="Ex: Distribuție...">
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-6 sticky top-8">
+                    <!-- Formular Adaugare -->
+                    <div class="card p-6 border-2 border-transparent focus-within:border-blue-100 transition shadow-lg">
+                        <h3 class="text-lg font-bold mb-6 text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-file-signature text-blue-600"></i> Înregistrare Nouă
+                        </h3>
+                        <form id="serviceForm" class="space-y-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kilometraj</label>
-                                <input type="number" id="km" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
+                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Tip Intervenție</label>
+                                <select id="type" class="w-full px-3 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="interventie">🔧 Intervenție / Reparație</option>
+                                    <option value="revizie">📅 Revizie Periodică</option>
+                                </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Data</label>
-                                <input type="date" id="date" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
+                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Descriere Lucrare</label>
+                                <input type="text" id="desc" required class="w-full px-3 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Schimb brațe față...">
                             </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Rulaj (KM)</label>
+                                    <input type="number" id="km" required class="w-full px-3 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Data</label>
+                                    <input type="date" id="date" required class="w-full px-3 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Cost Total (RON)</label>
+                                <input type="number" id="val" step="0.01" required class="w-full px-3 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 transition">
+                                Salvează în Jurnal
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Filtru Printare pe Zile -->
+                    <div class="card p-6 border-2 border-slate-100 shadow-md bg-slate-50/50">
+                        <h3 class="text-sm font-black mb-4 text-slate-700 flex items-center gap-2 uppercase tracking-widest">
+                            <i class="fas fa-print text-slate-400"></i> Raport Zilnic
+                        </h3>
+                        <div class="space-y-3">
+                            <p class="text-[10px] text-slate-500 font-bold uppercase">Selectează o zi specifică pentru printare:</p>
+                            <input type="date" id="printDaySelector" class="w-full px-3 py-3 bg-white border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700 shadow-inner">
+                            <button onclick="printDailyReport()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-xs hover:bg-black transition flex items-center justify-center gap-2">
+                                <i class="fas fa-file-pdf"></i> Printează Ziua Selectată
+                            </button>
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cost (RON)</label>
-                            <input type="number" id="val" step="0.01" required class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 shadow-lg">Salvează Cloud</button>
-                    </form>
+                    </div>
                 </div>
             </div>
 
-            <!-- Tabelul -->
+            <!-- Coloana Tabel -->
             <div class="lg:col-span-2">
-                <div class="card overflow-hidden">
-                    <div class="p-4 border-b bg-slate-50">
-                        <h3 class="font-bold text-slate-700 uppercase text-xs tracking-widest">Registru Mentenanță</h3>
+                <div class="card overflow-hidden shadow-lg border border-slate-100">
+                    <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                        <h3 class="font-black text-slate-700 uppercase text-[10px] tracking-widest">Istoric Service Complet</h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider">
-                                    <th class="p-4">Data / KM</th>
-                                    <th class="p-4">Tip / Detalii</th>
-                                    <th class="p-4 text-right">Cost (RON)</th>
-                                    <th class="p-4 no-print text-center admin-only hidden">Șterge</th>
+                                <tr class="bg-slate-100 text-slate-500 text-[10px] uppercase tracking-widest font-black">
+                                    <th class="p-4">Moment</th>
+                                    <th class="p-4">Detalii Lucrare</th>
+                                    <th class="p-4 text-right">Cost</th>
+                                    <th class="p-4 no-print text-center admin-only hidden">Acțiuni</th>
                                 </tr>
                             </thead>
-                            <tbody id="serviceTable" class="text-slate-700 text-sm"></tbody>
+                            <tbody id="serviceTable" class="text-slate-700 text-sm divide-y divide-slate-100">
+                                <!-- Linii generate din JS -->
+                            </tbody>
                             <tfoot class="bg-slate-50 border-t-2 border-slate-200">
                                 <tr>
-                                    <td colspan="2" class="p-4 font-bold text-slate-600 text-right uppercase text-xs">Total:</td>
+                                    <td colspan="2" class="p-4 font-black text-slate-600 text-right uppercase text-[10px]">Investiție Totală pe acest vehicul:</td>
                                     <td class="p-4 text-right font-black text-blue-700 text-base" id="tableTotal">0 RON</td>
                                     <td class="no-print admin-only hidden"></td>
                                 </tr>
@@ -178,32 +220,46 @@
         </div>
     </div>
 
-    <!-- Modal Masina -->
-    <div id="carModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h3 class="text-xl font-bold mb-4">Adaugă Masină</h3>
+    <!-- Modal Masina (Add/Edit) -->
+    <div id="carModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center p-4 z-[100]">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl scale-up animate">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalTitle" class="text-xl font-black text-slate-800 tracking-tight">Adaugă Vehicul</h3>
+                <button onclick="closeCarModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
             <div class="space-y-4">
-                <input type="text" id="newCarName" class="w-full px-3 py-2 bg-slate-50 border rounded-lg" placeholder="Marcă Model">
-                <input type="text" id="newCarPlate" class="w-full px-3 py-2 bg-slate-50 border rounded-lg" placeholder="Nr Înmatriculare">
-                <input type="text" id="newCarVin" class="w-full px-3 py-2 bg-slate-50 border rounded-lg" placeholder="VIN">
-                <input type="text" id="newCarEngine" class="w-full px-3 py-2 bg-slate-50 border rounded-lg" placeholder="Motor/An">
-                <div class="flex gap-3 pt-4">
-                    <button onclick="toggleCarModal()" class="flex-1 px-4 py-2 border rounded-lg font-bold">Anulează</button>
-                    <button onclick="saveNewCar()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">Salvează</button>
+                <input type="hidden" id="editCarId">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1">Marcă & Model</label>
+                    <input type="text" id="newCarName" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: BMW 320d F30">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1">Număr Înmatriculare</label>
+                    <input type="text" id="newCarPlate" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: B 123 ABC">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1">Serie Șasiu (VIN)</label>
+                    <input type="text" id="newCarVin" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Optional">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1">Detalii Motor / An</label>
+                    <input type="text" id="newCarEngine" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 2.0 Diesel, 184CP, 2014">
+                </div>
+                <div class="flex gap-3 pt-6">
+                    <button onclick="closeCarModal()" class="flex-1 px-4 py-4 border rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition">Anulează</button>
+                    <button onclick="saveCarData()" class="flex-1 px-4 py-4 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-100 transition">Salvează Cloud</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase -->
+    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // CONFIGURARE ADMIN
         const ADMIN_EMAIL = "bindeaandrei@ymail.com";
-
         const firebaseConfig = {
             apiKey: "AIzaSyD5jSwmXpXFIfVCSOY-gpCd_VOhh-q8YUY",
             authDomain: "servicecar-c0fec.firebaseapp.com",
@@ -227,14 +283,13 @@
         let unsubLogs = null;
         let unsubCars = null;
 
-        // Login Handler
+        // AUTH
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
             const err = document.getElementById('authError');
             err.classList.add('hidden');
-
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
             } catch (e) {
@@ -248,21 +303,14 @@
             if (user) {
                 currentUser = user;
                 isAdmin = user.email === ADMIN_EMAIL;
-                
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('appScreen').classList.remove('hidden');
                 document.getElementById('userEmailDisplay').innerText = user.email;
-                
                 if (isAdmin) {
                     document.getElementById('adminTag').classList.remove('hidden');
                     document.getElementById('deleteCarBtn').classList.remove('hidden');
                     document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-                } else {
-                    document.getElementById('adminTag').classList.add('hidden');
-                    document.getElementById('deleteCarBtn').classList.add('hidden');
-                    document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
                 }
-
                 startSync();
             } else {
                 currentUser = null;
@@ -276,20 +324,17 @@
         function startSync() {
             document.getElementById('loader').classList.remove('hidden');
             const carsPath = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cars');
-            
             unsubCars = onSnapshot(carsPath, (snap) => {
                 cars = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                if (cars.length === 0 && !isAdmin) {
+                if (cars.length > 0) {
+                    if (!currentCarId || !cars.find(c => c.id === currentCarId)) currentCarId = cars[0].id;
+                    renderUI();
+                    syncLogs();
+                } else if (!isAdmin) {
                     createDefaultCar();
-                } else {
-                    if (cars.length > 0) {
-                        if (!currentCarId || !cars.find(c => c.id === currentCarId)) currentCarId = cars[0].id;
-                        renderUI();
-                        syncLogs();
-                    }
                 }
                 document.getElementById('loader').classList.add('hidden');
-            });
+            }, (err) => console.error("Cars Sync Error", err));
         }
 
         function syncLogs() {
@@ -299,32 +344,157 @@
             unsubLogs = onSnapshot(logsPath, (snap) => {
                 logs = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 renderTable();
-            });
+            }, (err) => console.error("Logs Sync Error", err));
         }
 
         async function createDefaultCar() {
             const carsPath = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cars');
-            await addDoc(carsPath, { name: 'Mașina Nouă', plate: 'B 01 TEST', vin: '-', engine: '-', createdAt: new Date().toISOString() });
+            await addDoc(carsPath, { name: 'Primul Vehicul', plate: 'B 00 AAA', vin: '-', engine: '-', createdAt: new Date().toISOString() });
         }
 
-        window.saveNewCar = async () => {
+        // PRINT ZILNIC LOGIC
+        window.printDailyReport = () => {
+            const selectedDate = document.getElementById('printDaySelector').value;
+            if (!selectedDate) {
+                alert("Te rugăm să selectezi o dată pentru raport.");
+                return;
+            }
+
+            const carLogs = logs.filter(l => l.carId === currentCarId && l.date === selectedDate);
+            const car = cars.find(c => c.id === currentCarId);
+
+            if (carLogs.length === 0) {
+                alert("Nu există înregistrări pentru data selectată.");
+                return;
+            }
+
+            // Constructie template print
+            let printContent = `
+                <div style="font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b;">
+                    <div style="border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; color: #1e293b;">Raport de Lucrări Service</h1>
+                            <p style="margin: 5px 0 0 0; color: #64748b; font-weight: bold;">Data: ${new Date(selectedDate).toLocaleDateString('ro-RO')}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="margin: 0; font-size: 18px; font-weight: 900;">GARAJ DIGITAL</h2>
+                            <p style="margin: 0; font-size: 12px; color: #94a3b8;">Sistem Gestiune Cloud</p>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+                        <table style="width: 100%; font-size: 14px;">
+                            <tr>
+                                <td style="color: #64748b; text-transform: uppercase; font-size: 10px; font-weight: 900;">Vehicul:</td>
+                                <td style="font-weight: 900; color: #1e293b;">${car.name}</td>
+                                <td style="color: #64748b; text-transform: uppercase; font-size: 10px; font-weight: 900;">Nr. Înmatriculare:</td>
+                                <td style="font-weight: 900; color: #1e293b;">${car.plate}</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #64748b; text-transform: uppercase; font-size: 10px; font-weight: 900;">VIN:</td>
+                                <td style="font-weight: 900; color: #1e293b;">${car.vin}</td>
+                                <td style="color: #64748b; text-transform: uppercase; font-size: 10px; font-weight: 900;">Motorizare:</td>
+                                <td style="font-weight: 900; color: #1e293b;">${car.engine}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 15px;">Intervenții Efectuate</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
+                        <thead>
+                            <tr style="background: #f1f5f9; text-align: left;">
+                                <th style="padding: 12px; border: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase;">Rulaj (KM)</th>
+                                <th style="padding: 12px; border: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase;">Descriere Lucrare</th>
+                                <th style="padding: 12px; border: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; text-align: right;">Cost (RON)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${carLogs.map(l => `
+                                <tr>
+                                    <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold;">${l.km.toLocaleString()}</td>
+                                    <td style="padding: 12px; border: 1px solid #e2e8f0;">[${l.type === 'revizie' ? 'REVIZIE' : 'REPARAȚIE'}] ${l.desc}</td>
+                                    <td style="padding: 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 900;">${l.val.toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: #f8fafc;">
+                                <td colspan="2" style="padding: 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 900; text-transform: uppercase; font-size: 11px;">Total de Plată:</td>
+                                <td style="padding: 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 900; color: #2563eb; font-size: 16px;">${carLogs.reduce((sum, l) => sum + l.val, 0).toLocaleString()} RON</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div style="margin-top: 80px; display: flex; justify-content: space-between;">
+                        <div style="width: 200px; border-top: 1px solid #94a3b8; text-align: center; padding-top: 10px; font-size: 12px; color: #64748b;">Semnătură Executant</div>
+                        <div style="width: 200px; border-top: 1px solid #94a3b8; text-align: center; padding-top: 10px; font-size: 12px; color: #64748b;">Semnătură Beneficiar</div>
+                    </div>
+                </div>
+            `;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`<html><head><title>Raport Service Zilnic - ${selectedDate}</title><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap'); body { margin: 0; }</style></head><body>${printContent}</body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        };
+
+        // CAR MODAL LOGIC
+        window.openCarModal = (mode) => {
+            const modal = document.getElementById('carModal');
+            const title = document.getElementById('modalTitle');
+            const idInput = document.getElementById('editCarId');
+            
+            if (mode === 'edit' && currentCarId) {
+                const car = cars.find(c => c.id === currentCarId);
+                title.innerText = "Editează Vehicul";
+                idInput.value = car.id;
+                document.getElementById('newCarName').value = car.name;
+                document.getElementById('newCarPlate').value = car.plate;
+                document.getElementById('newCarVin').value = car.vin;
+                document.getElementById('newCarEngine').value = car.engine;
+            } else {
+                title.innerText = "Adaugă Vehicul Nou";
+                idInput.value = "";
+                document.getElementById('newCarName').value = "";
+                document.getElementById('newCarPlate').value = "";
+                document.getElementById('newCarVin').value = "";
+                document.getElementById('newCarEngine').value = "";
+            }
+            modal.classList.remove('hidden');
+        };
+
+        window.closeCarModal = () => document.getElementById('carModal').classList.add('hidden');
+
+        window.saveCarData = async () => {
+            const id = document.getElementById('editCarId').value;
             const name = document.getElementById('newCarName').value;
             const plate = document.getElementById('newCarPlate').value;
+            const vin = document.getElementById('newCarVin').value || '-';
+            const engine = document.getElementById('newCarEngine').value || '-';
+            
             if (!name || !plate) return;
-            const carsPath = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cars');
-            await addDoc(carsPath, {
-                name, plate,
-                vin: document.getElementById('newCarVin').value || '-',
-                engine: document.getElementById('newCarEngine').value || '-',
-                createdAt: new Date().toISOString(),
-                ownerUid: currentUser.uid
-            });
-            toggleCarModal();
+            
+            try {
+                if (id) {
+                    const carRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', id);
+                    await updateDoc(carRef, { name, plate, vin, engine });
+                } else {
+                    const carsPath = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'cars');
+                    await addDoc(carsPath, { name, plate, vin, engine, createdAt: new Date().toISOString() });
+                }
+                closeCarModal();
+            } catch (e) {
+                console.error("Save Error", e);
+            }
         };
 
         window.deleteCurrentCar = async () => {
-            if (!isAdmin) return;
-            if (confirm("ATENȚIE: Adminule, ștergi definitiv această mașină?")) {
+            if (!isAdmin || !currentCarId) return;
+            if (confirm("Ești sigur că vrei să ștergi acest vehicul și tot istoricul său? Această acțiune este ireversibilă.")) {
                 await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cars', currentCarId));
                 currentCarId = null;
             }
@@ -338,13 +508,14 @@
 
         window.removeItem = async (id) => {
             if (!isAdmin) return;
-            if (confirm("Ștergi înregistrarea?")) {
+            if (confirm("Elimini această înregistrare din jurnal?")) {
                 await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'logs', id));
             }
         };
 
         document.getElementById('serviceForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!currentCarId) return;
             const logsPath = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'logs');
             await addDoc(logsPath, {
                 carId: currentCarId,
@@ -359,8 +530,6 @@
             document.getElementById('date').valueAsDate = new Date();
         });
 
-        window.toggleCarModal = () => document.getElementById('carModal').classList.toggle('hidden');
-
         function renderUI() {
             const sel = document.getElementById('carSelector');
             sel.innerHTML = cars.map(c => `<option value="${c.id}" ${c.id===currentCarId?'selected':''}>${c.plate} - ${c.name}</option>`).join('');
@@ -368,15 +537,26 @@
             const car = cars.find(c => c.id === currentCarId);
             if (car) {
                 document.getElementById('carHeader').innerHTML = `
-                    <div class="flex flex-col md:flex-row justify-between gap-4">
-                        <div class="flex items-center gap-4">
-                            <div class="bg-blue-600 p-3 rounded-lg text-white"><i class="fas fa-car text-2xl"></i></div>
-                            <div><h2 class="text-xl font-bold">${car.name}</h2><p class="text-blue-600 font-bold uppercase text-xs">${car.plate}</p></div>
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                        <div class="flex items-center gap-5">
+                            <div class="bg-blue-600 w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                                <i class="fas fa-car-side text-2xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-black text-slate-800 tracking-tight">${car.name}</h2>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-slate-800 text-white px-2 py-0.5 rounded text-[10px] font-black">${car.plate}</span>
+                                    <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Vehicul activ</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex gap-4 text-xs font-bold text-slate-500">
-                            <div>VIN: <span class="text-slate-800">${car.vin}</span></div>
-                            <div>SPEC: <span class="text-slate-800">${car.engine}</span></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-xs font-bold bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                            <div class="flex flex-col"><span class="text-slate-400 uppercase text-[9px]">Serie Șasiu (VIN)</span> <span class="text-slate-700 font-black">${car.vin}</span></div>
+                            <div class="flex flex-col"><span class="text-slate-400 uppercase text-[9px]">Motorizare / An</span> <span class="text-slate-700 font-black">${car.engine}</span></div>
                         </div>
+                    </div>
+                    <div class="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                        <i class="fas fa-tools text-9xl"></i>
                     </div>`;
             }
         }
@@ -387,17 +567,36 @@
             let total = 0, maxKm = 0, cI = 0, cR = 0;
             const carLogs = logs.filter(l => l.carId === currentCarId).sort((a,b) => new Date(b.date) - new Date(a.date));
             
+            if (carLogs.length === 0) {
+                table.innerHTML = `<tr><td colspan="4" class="p-12 text-center text-slate-400 font-medium italic">Nicio înregistrare găsită. Folosește formularul din stânga pentru a adăuga prima revizie.</td></tr>`;
+            }
+
             carLogs.forEach(item => {
                 total += item.val;
                 if (item.km > maxKm) maxKm = item.km;
                 item.type === 'revizie' ? cR++ : cI++;
                 table.innerHTML += `
-                    <tr class="border-b">
-                        <td class="p-4"><b>${item.date}</b><br><small class="text-blue-600">${item.km.toLocaleString()} KM</small></td>
-                        <td class="p-4"><span class="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${item.type==='revizie'?'bg-purple-100 text-purple-700':'bg-orange-100 text-orange-700'}">${item.type}</span><br>${item.desc}</td>
-                        <td class="p-4 text-right"><b>${item.val.toLocaleString()}</b> <small>RON</small></td>
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="p-4">
+                            <div class="font-black text-slate-800">${new Date(item.date).toLocaleDateString('ro-RO')}</div>
+                            <div class="text-blue-600 font-black text-[11px]">${item.km.toLocaleString()} KM</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${item.type==='revizie'?'bg-purple-100 text-purple-700':'bg-orange-100 text-orange-700'}">
+                                    ${item.type === 'revizie' ? 'Revizie' : 'Reparație'}
+                                </span>
+                            </div>
+                            <div class="text-slate-700 font-medium">${item.desc}</div>
+                        </td>
+                        <td class="p-4 text-right">
+                            <div class="font-black text-slate-800">${item.val.toLocaleString('ro-RO')}</div>
+                            <div class="text-slate-400 text-[10px] font-bold uppercase">RON</div>
+                        </td>
                         <td class="p-4 text-center no-print admin-only ${!isAdmin ? 'hidden' : ''}">
-                            <button onclick="removeItem('${item.id}')" class="text-slate-300 hover:text-rose-500"><i class="fas fa-trash-alt"></i></button>
+                            <button onclick="removeItem('${item.id}')" class="w-8 h-8 rounded-full hover:bg-rose-50 text-slate-300 hover:text-rose-500 transition">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
                         </td>
                     </tr>`;
             });
@@ -409,7 +608,10 @@
             document.getElementById('countRevizii').innerText = cR;
         }
 
-        window.onload = () => document.getElementById('date').valueAsDate = new Date();
+        window.onload = () => {
+            document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('printDaySelector').valueAsDate = new Date();
+        };
     </script>
 </body>
 </html>
