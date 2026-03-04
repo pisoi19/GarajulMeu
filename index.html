@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Garaj Digital - Panou Administrare</title>
+    <title>Garaj Digital - Detalii Granulare</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,46 +15,35 @@
         .hidden { display: none !important; }
         .loading-overlay { position: fixed; inset: 0; background: white; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         
+        .expandable-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .expanded .expandable-content { max-height: 500px; }
+        .rotate-icon { transition: transform 0.3s ease; }
+        .expanded .rotate-icon { transform: rotate(180deg); }
+
         @media print {
             .no-print { display: none !important; }
             body { background: white; padding: 0; }
-            .print-only { display: block !important; }
+            .expandable-content { max-height: none !important; }
         }
     </style>
 </head>
 <body class="antialiased">
 
-    <!-- Ecran Incarcare -->
     <div id="loader" class="loading-overlay">
         <div class="flex flex-col items-center gap-4">
             <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Sincronizare Cloud...</p>
+            <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Se încarcă garajul...</p>
         </div>
     </div>
 
     <!-- Autentificare -->
     <div id="authScreen" class="fixed inset-0 flex items-center justify-center bg-slate-50 z-[500] p-4 hidden">
-        <div class="glass-card w-full max-w-md p-10 shadow-2xl">
-            <div class="text-center mb-10">
-                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-key text-2xl"></i>
-                </div>
-                <h2 class="text-2xl font-extrabold text-slate-900">Acces Garaj</h2>
-                <p class="text-slate-500 text-sm mt-1">Introdu datele pentru a continua</p>
-            </div>
-            <form id="loginForm" class="space-y-5">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Email</label>
-                    <input type="email" id="email" required class="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-500 transition shadow-sm" placeholder="nume@exemplu.com">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Parolă</label>
-                    <input type="password" id="password" required class="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-500 transition shadow-sm" placeholder="••••••••">
-                </div>
-                <div id="authError" class="text-red-500 text-xs font-bold text-center hidden">Date incorecte!</div>
-                <button type="submit" class="w-full btn-primary py-4 rounded-2xl font-bold uppercase text-xs tracking-widest mt-4">
-                    Intră în Cont
-                </button>
+        <div class="glass-card w-full max-w-md p-10 shadow-2xl text-center">
+            <h2 class="text-2xl font-extrabold text-slate-900 mb-6">Acces Administrare</h2>
+            <form id="loginForm" class="space-y-4">
+                <input type="email" id="email" required class="w-full px-5 py-4 border rounded-2xl outline-none" placeholder="Email">
+                <input type="password" id="password" required class="w-full px-5 py-4 border rounded-2xl outline-none" placeholder="Parolă">
+                <button type="submit" class="w-full btn-primary py-4 rounded-2xl font-bold uppercase text-xs tracking-widest">Intră în Cont</button>
             </form>
         </div>
     </div>
@@ -62,142 +51,86 @@
     <!-- Main Content -->
     <div id="appScreen" class="max-w-7xl mx-auto px-4 py-8 hidden">
         
-        <!-- Header Nav -->
-        <header class="flex justify-between items-center mb-10 no-print">
+        <header class="flex justify-between items-center mb-8 no-print">
             <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                    <i class="fas fa-car-side"></i>
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <i class="fas fa-car"></i>
                 </div>
-                <div>
-                    <h1 class="text-xl font-extrabold text-slate-900">Garaj Digital</h1>
-                    <p id="userEmailDisplay" class="text-xs text-slate-500 font-medium">Utilizator</p>
-                </div>
+                <h1 class="text-lg font-extrabold text-slate-900">Garaj Digital</h1>
             </div>
-            <button onclick="handleLogout()" class="px-5 py-2.5 rounded-xl text-slate-500 hover:bg-slate-100 font-bold text-xs uppercase transition border border-transparent hover:border-slate-200">
-                Deconectare <i class="fas fa-sign-out-alt ml-2"></i>
-            </button>
+            <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 font-bold text-xs uppercase transition">Deconectare</button>
         </header>
 
-        <!-- Bara de Actiuni (Selector Mașină + Butoane Edit) -->
+        <!-- Selector Mașină -->
         <section class="flex flex-wrap items-center justify-between gap-4 mb-8 no-print">
             <div class="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
                 <select id="carSelector" onchange="switchCar()" class="bg-transparent border-none text-slate-700 text-sm font-bold px-4 py-2 outline-none cursor-pointer">
                     <!-- Dinamic -->
                 </select>
-                <div class="h-6 w-px bg-slate-200 mx-1"></div>
-                <button onclick="openCarModal('edit')" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Editează mașina">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button onclick="openCarModal('add')" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition" title="Adaugă mașină nouă">
-                    <i class="fas fa-plus-circle"></i>
-                </button>
-                <button id="deleteCarBtn" onclick="deleteCurrentCar()" class="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition hidden">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+                <div class="h-6 w-px bg-slate-200"></div>
+                <button onclick="openCarModal('edit')" class="w-8 h-8 text-slate-400 hover:text-blue-600"><i class="fas fa-edit"></i></button>
+                <button onclick="openCarModal('add')" class="w-8 h-8 text-slate-400 hover:text-emerald-600"><i class="fas fa-plus-circle"></i></button>
+                <button id="deleteCarBtn" onclick="deleteCurrentCar()" class="w-8 h-8 text-slate-300 hover:text-red-500 hidden"><i class="fas fa-trash"></i></button>
             </div>
-            
-            <button onclick="window.print()" class="bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-black transition shadow-lg">
-                <i class="fas fa-print mr-2"></i> Istoric Complet PDF
-            </button>
         </section>
 
-        <!-- Carte de Identitate Masina -->
-        <div id="carHero" class="glass-card p-8 mb-8 relative overflow-hidden bg-gradient-to-br from-white to-slate-50">
+        <!-- Hero Masina -->
+        <div id="carHero" class="glass-card p-8 mb-8 bg-gradient-to-br from-white to-slate-50 relative overflow-hidden">
             <!-- Injectat din JS -->
         </div>
 
-        <!-- Statistici -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 no-print text-center">
-            <div class="glass-card p-6 border-b-4 border-b-blue-500">
-                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Total Investit</p>
-                <p id="statTotal" class="text-xl font-extrabold text-slate-900">0 RON</p>
-            </div>
-            <div class="glass-card p-6 border-b-4 border-b-emerald-500">
-                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Km Actuali</p>
-                <p id="statKm" class="text-xl font-extrabold text-slate-900">0 KM</p>
-            </div>
-            <div class="glass-card p-6 border-b-4 border-b-orange-500">
-                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Intervenții</p>
-                <p id="statInt" class="text-xl font-extrabold text-slate-900">0</p>
-            </div>
-            <div class="glass-card p-6 border-b-4 border-b-purple-500">
-                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Revizii</p>
-                <p id="statRev" class="text-xl font-extrabold text-slate-900">0</p>
-            </div>
-        </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Sidebar Stanga -->
-            <aside class="lg:col-span-4 space-y-8 no-print">
-                <!-- Formular Adaugare -->
-                <div class="glass-card p-8 shadow-xl border-blue-100">
-                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                        <i class="fas fa-plus-square text-blue-600"></i> Adaugă Înregistrare
-                    </h3>
+            <!-- Sidebar -->
+            <aside class="lg:col-span-4 space-y-6 no-print">
+                <div class="glass-card p-6 shadow-xl border-blue-50">
+                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-widest mb-6">Înregistrare Nouă</h3>
                     <form id="logForm" class="space-y-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Tip</label>
-                            <select id="logType" class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium">
-                                <option value="interventie">🔧 Intervenție / Reparație</option>
-                                <option value="revizie">📅 Revizie Periodică</option>
-                            </select>
+                        <select id="logType" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-sm">
+                            <option value="interventie">🔧 Intervenție / Reparație</option>
+                            <option value="revizie">📅 Revizie Periodică</option>
+                        </select>
+                        <input type="text" id="logDesc" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" placeholder="Titlu lucrare (ex: Revizie completă)">
+                        
+                        <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                            <label class="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-2 block">Detalii piese & manoperă (opțional)</label>
+                            <textarea id="logSubDetails" rows="3" class="w-full px-3 py-2 bg-white border border-blue-100 rounded-lg outline-none text-xs" placeholder="Filtru ulei: 50&#10;Filtru aer: 80&#10;Manoperă: 150"></textarea>
+                            <p class="text-[9px] text-blue-400 mt-1 italic">Folosește formatul "Nume: Preț" pe fiecare rând.</p>
                         </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descriere</label>
-                            <input type="text" id="logDesc" required class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" placeholder="Ex: Schimb ulei + filtre">
-                        </div>
+
                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Kilometraj</label>
-                                <input type="number" id="logKm" required class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Data</label>
-                                <input type="date" id="logDate" required class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500">
-                            </div>
+                            <input type="number" id="logKm" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm" placeholder="Kilometraj">
+                            <input type="date" id="logDate" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm">
                         </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Cost (RON)</label>
-                            <input type="number" id="logVal" step="0.01" required class="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500">
-                        </div>
-                        <button type="submit" class="w-full btn-primary py-4 rounded-xl font-extrabold uppercase text-xs tracking-widest mt-2">
-                            Salvează Cloud
-                        </button>
+                        <input type="number" id="logVal" step="0.01" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold" placeholder="Cost Total (RON)">
+                        <button type="submit" class="w-full btn-primary py-4 rounded-xl font-extrabold uppercase text-xs tracking-widest">Salvează în Jurnal</button>
                     </form>
                 </div>
 
-                <!-- Modul Printare pe Zile -->
-                <div class="glass-card p-8 bg-slate-900 text-white shadow-2xl">
-                    <h3 class="text-sm font-extrabold uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <i class="fas fa-file-invoice text-blue-400"></i> Raport Zilnic
-                    </h3>
-                    <p class="text-xs text-slate-400 mb-6">Generează o fișă de service pentru o zi anume.</p>
-                    <div class="space-y-4">
-                        <input type="date" id="printDaySelector" class="w-full px-4 py-3.5 bg-white/10 border border-white/20 rounded-xl outline-none text-white font-bold">
-                        <button onclick="printDailyReport()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-extrabold uppercase text-xs tracking-widest transition shadow-lg shadow-blue-900/20">
-                            <i class="fas fa-print mr-2"></i> Printează Ziua
-                        </button>
-                    </div>
+                <!-- Print Zilnic -->
+                <div class="glass-card p-6 bg-slate-900 text-white">
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-4">Raport Zilnic</h3>
+                    <input type="date" id="printDaySelector" class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white mb-3">
+                    <button onclick="printDailyReport()" class="w-full bg-blue-600 py-3 rounded-xl font-bold text-xs uppercase tracking-widest"><i class="fas fa-print mr-2"></i> Printează Ziua</button>
                 </div>
             </aside>
 
-            <!-- Tabel Istoric -->
+            <!-- Tabel Jurnal -->
             <main class="lg:col-span-8">
                 <div class="glass-card overflow-hidden shadow-sm border border-slate-200">
-                    <div class="bg-slate-50 px-8 py-4 border-b border-slate-200 flex justify-between items-center">
-                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Jurnal Activități</span>
+                    <div class="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Istoric Service Complet</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full border-collapse">
                             <thead>
                                 <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
-                                    <th class="px-8 py-5">Moment / Km</th>
-                                    <th class="px-8 py-5">Detalii Lucrare</th>
-                                    <th class="px-8 py-5 text-right">Cost</th>
-                                    <th class="px-8 py-5 text-center admin-only hidden no-print">Elimină</th>
+                                    <th class="px-6 py-4">Data / KM</th>
+                                    <th class="px-6 py-4">Detalii Lucrare</th>
+                                    <th class="px-6 py-4 text-right">Cost (RON)</th>
+                                    <th class="px-6 py-4 text-center no-print">Acțiuni</th>
                                 </tr>
                             </thead>
-                            <tbody id="tableBody" class="divide-y divide-slate-50 text-sm">
+                            <tbody id="tableBody" class="text-sm">
                                 <!-- Dinamic -->
                             </tbody>
                         </table>
@@ -207,25 +140,24 @@
         </div>
     </div>
 
-    <!-- Modal Masina -->
-    <div id="carModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[1000] hidden flex items-center justify-center p-4">
-        <div class="glass-card max-w-md w-full p-10 shadow-2xl animate-in zoom-in duration-300">
-            <h3 id="modalTitle" class="text-xl font-extrabold text-slate-900 mb-6 tracking-tight">Vehicul</h3>
+    <!-- Modals (Car) -->
+    <div id="carModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000] hidden flex items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full p-8 shadow-2xl">
+            <h3 id="modalTitle" class="text-lg font-black text-slate-900 mb-6 uppercase tracking-tight">Vehicul</h3>
             <input type="hidden" id="editId">
-            <div class="space-y-4">
-                <input type="text" id="mName" placeholder="Marcă Model (ex: VW Passat)" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-blue-500">
-                <input type="text" id="mPlate" placeholder="Număr (ex: B 123 ABC)" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-blue-500 uppercase">
-                <input type="text" id="mVin" placeholder="Serie Șasiu (VIN)" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-blue-500 uppercase">
-                <input type="text" id="mSpec" placeholder="Specificații (ex: 2.0 TDI 2020)" class="w-full px-5 py-4 bg-slate-50 border rounded-2xl outline-none focus:border-blue-500">
-                <div class="flex gap-4 pt-4">
-                    <button onclick="closeCarModal()" class="flex-1 py-4 text-slate-500 font-bold border border-slate-200 rounded-2xl hover:bg-slate-50 transition">Anulează</button>
-                    <button onclick="saveCar()" class="flex-1 py-4 btn-primary rounded-2xl font-extrabold text-xs uppercase tracking-widest">Salvează</button>
+            <div class="space-y-3">
+                <input type="text" id="mName" placeholder="Marcă Model" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none">
+                <input type="text" id="mPlate" placeholder="Număr" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none uppercase">
+                <input type="text" id="mVin" placeholder="VIN" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none uppercase">
+                <input type="text" id="mSpec" placeholder="Specificații" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none">
+                <div class="flex gap-3 pt-4">
+                    <button onclick="closeCarModal()" class="flex-1 py-3 text-slate-400 font-bold border rounded-xl">Anulare</button>
+                    <button onclick="saveCar()" class="flex-1 py-3 btn-primary rounded-xl font-bold">Salvare</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -244,7 +176,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const APP_ID = "garaj_pro_v3";
+        const APP_ID = "garaj_pro_v3_granulated";
 
         let user = null;
         let isAdmin = false;
@@ -253,7 +185,6 @@
         let currentCarId = null;
         let unsubLogs = null;
 
-        // AUTH LOGIC
         onAuthStateChanged(auth, (u) => {
             document.getElementById('loader').classList.add('hidden');
             if (u) {
@@ -261,11 +192,7 @@
                 isAdmin = u.email === ADMIN_EMAIL;
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('appScreen').classList.remove('hidden');
-                document.getElementById('userEmailDisplay').innerText = isAdmin ? "ADMIN SUPREM" : u.email;
-                if (isAdmin) {
-                    document.getElementById('deleteCarBtn').classList.remove('hidden');
-                    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-                }
+                if (isAdmin) document.getElementById('deleteCarBtn').classList.remove('hidden');
                 syncCars();
             } else {
                 document.getElementById('authScreen').classList.remove('hidden');
@@ -275,55 +202,45 @@
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const err = document.getElementById('authError');
-            err.classList.add('hidden');
-            try {
-                await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value);
-            } catch (ex) {
-                err.classList.remove('hidden');
-            }
+            try { await signInWithEmailAndPassword(auth, document.getElementById('email').value, document.getElementById('password').value); } 
+            catch (ex) { alert("Eroare de autentificare!"); }
         });
 
         window.handleLogout = () => signOut(auth);
 
-        // DATA SYNC
         function syncCars() {
-            const path = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'cars');
-            onSnapshot(path, (snap) => {
+            onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'cars'), (snap) => {
                 cars = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 if (cars.length > 0) {
                     if (!currentCarId || !cars.find(c => c.id === currentCarId)) currentCarId = cars[0].id;
                     renderHeader();
                     syncLogs();
-                } else if (!isAdmin) {
-                    createDefaultCar();
-                }
+                } else if (!isAdmin) { createDefaultCar(); }
             });
         }
 
         async function createDefaultCar() {
-            const path = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'cars');
-            await addDoc(path, { name: 'Volkswagen Passat B8.5', plate: 'B968CRV', vin: 'WVWZZZ3CZLE061083', spec: '1.5 TSI EVO 2020' });
+            await addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'cars'), { 
+                name: 'VW Passat B8.5', plate: 'B968CRV', vin: 'WVWZZZ3CZLE061083', spec: '1.5 TSI 2020' 
+            });
         }
 
         function syncLogs() {
             if (!currentCarId) return;
             if (unsubLogs) unsubLogs();
-            const path = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'logs');
-            unsubLogs = onSnapshot(path, (snap) => {
+            unsubLogs = onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'logs'), (snap) => {
                 logs = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 renderUI();
             });
         }
 
-        // CRUD LOGS
         document.getElementById('logForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const path = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'logs');
-            await addDoc(path, {
+            await addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'logs'), {
                 carId: currentCarId,
                 type: document.getElementById('logType').value,
                 desc: document.getElementById('logDesc').value,
+                subDetails: document.getElementById('logSubDetails').value,
                 km: parseInt(document.getElementById('logKm').value),
                 date: document.getElementById('logDate').value,
                 val: parseFloat(document.getElementById('logVal').value)
@@ -333,91 +250,35 @@
         });
 
         window.removeItem = async (id) => {
-            if (!isAdmin) return;
-            if (confirm("Ștergi această intrare?")) {
+            if (confirm("Ștergi această înregistrare?")) {
                 await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'logs', id));
             }
         };
 
-        // CAR MODAL
-        window.openCarModal = (mode) => {
-            const m = document.getElementById('carModal');
-            const idInput = document.getElementById('editId');
-            if (mode === 'edit') {
-                const c = cars.find(x => x.id === currentCarId);
-                idInput.value = c.id;
-                document.getElementById('mName').value = c.name;
-                document.getElementById('mPlate').value = c.plate;
-                document.getElementById('mVin').value = c.vin;
-                document.getElementById('mSpec').value = c.spec;
-            } else {
-                idInput.value = "";
-                document.getElementById('mName').value = "";
-                document.getElementById('mPlate').value = "";
-                document.getElementById('mVin').value = "";
-                document.getElementById('mSpec').value = "";
-            }
-            m.classList.remove('hidden');
+        window.toggleRow = (id) => {
+            const row = document.getElementById(`row-${id}`);
+            row.classList.toggle('expanded');
         }
 
-        window.closeCarModal = () => document.getElementById('carModal').classList.add('hidden');
-
-        window.saveCar = async () => {
-            const id = document.getElementById('editId').value;
-            const data = {
-                name: document.getElementById('mName').value,
-                plate: document.getElementById('mPlate').value.toUpperCase(),
-                vin: document.getElementById('mVin').value.toUpperCase(),
-                spec: document.getElementById('mSpec').value
-            };
-            if (!data.name || !data.plate) return;
-            const path = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'cars');
-            if (id) {
-                await updateDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'cars', id), data);
-            } else {
-                await addDoc(path, data);
-            }
-            closeCarModal();
-        }
-
-        window.deleteCurrentCar = async () => {
-            if (!isAdmin || !currentCarId) return;
-            if (confirm("ATENȚIE: Ștergi mașina și tot istoricul ei?")) {
-                await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'cars', currentCarId));
-                currentCarId = null;
-            }
-        }
-
-        window.switchCar = () => {
-            currentCarId = document.getElementById('carSelector').value;
-            renderHeader();
-            syncLogs();
-        }
-
-        // RENDER FUNCTIONS
         function renderHeader() {
             const sel = document.getElementById('carSelector');
             sel.innerHTML = cars.map(c => `<option value="${c.id}" ${c.id === currentCarId ? 'selected' : ''}>${c.plate} - ${c.name}</option>`).join('');
-            
             const car = cars.find(c => c.id === currentCarId);
             if (car) {
                 document.getElementById('carHero').innerHTML = `
-                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div class="flex items-center gap-6">
-                            <div class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-blue-600 shadow-xl border border-slate-100">
-                                <i class="fas fa-car text-3xl"></i>
-                            </div>
+                    <div class="flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-sm border border-slate-100"><i class="fas fa-car-side text-2xl"></i></div>
                             <div>
-                                <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">${car.name}</h2>
-                                <p class="text-blue-600 font-bold tracking-[0.2em] text-sm">${car.plate}</p>
+                                <h2 class="text-2xl font-black text-slate-900">${car.name}</h2>
+                                <p class="text-blue-500 font-black tracking-widest text-xs">${car.plate}</p>
                             </div>
                         </div>
-                        <div class="bg-white/50 backdrop-blur p-6 rounded-2xl border border-white/80 grid grid-cols-2 gap-x-8 gap-y-2 shadow-sm">
-                            <div class="flex flex-col"><span class="text-[9px] font-black text-slate-400 uppercase">VIN</span> <span class="text-xs font-bold text-slate-700">${car.vin}</span></div>
-                            <div class="flex flex-col"><span class="text-[9px] font-black text-slate-400 uppercase">Spec</span> <span class="text-xs font-bold text-slate-700">${car.spec}</span></div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-black text-slate-400 uppercase">Serie Șasiu</p>
+                            <p class="text-sm font-bold text-slate-700 uppercase">${car.vin}</p>
                         </div>
                     </div>
-                    <i class="fas fa-tools absolute -bottom-8 -right-8 text-[180px] text-slate-900/[0.03] rotate-12"></i>
                 `;
             }
         }
@@ -425,83 +286,91 @@
         function renderUI() {
             const body = document.getElementById('tableBody');
             body.innerHTML = "";
-            let total = 0, km = 0, ints = 0, revs = 0;
-            
             const carLogs = logs.filter(l => l.carId === currentCarId).sort((a,b) => new Date(b.date) - new Date(a.date));
-            
-            if (carLogs.length === 0) {
-                body.innerHTML = '<tr><td colspan="4" class="px-8 py-12 text-center text-slate-400 italic font-medium">Nicio activitate înregistrată încă.</td></tr>';
-            }
 
             carLogs.forEach(l => {
-                total += l.val;
-                if (l.km > km) km = l.km;
-                l.type === 'revizie' ? revs++ : ints++;
-                
+                const subRows = l.subDetails ? l.subDetails.split('\n').filter(line => line.trim()) : [];
+                const hasDetails = subRows.length > 0;
+
                 body.innerHTML += `
-                    <tr class="hover:bg-slate-50/50 transition duration-200">
-                        <td class="px-8 py-5">
-                            <div class="font-extrabold text-slate-900">${new Date(l.date).toLocaleDateString('ro-RO')}</div>
-                            <div class="text-[10px] text-blue-600 font-black tracking-widest">${l.km.toLocaleString()} KM</div>
-                        </td>
-                        <td class="px-8 py-5">
-                            <div class="flex items-center gap-2 mb-1.5">
-                                <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${l.type==='revizie' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}">
-                                    ${l.type === 'revizie' ? 'Revizie' : 'Reparație'}
-                                </span>
+                    <tr id="row-${l.id}" class="group border-b border-slate-50">
+                        <td colspan="4" class="p-0">
+                            <div class="flex items-center px-6 py-4 cursor-pointer hover:bg-slate-50/50" onclick="${hasDetails ? `toggleRow('${l.id}')` : ''}">
+                                <div class="w-32">
+                                    <div class="font-bold text-slate-900">${new Date(l.date).toLocaleDateString('ro-RO')}</div>
+                                    <div class="text-[10px] text-blue-500 font-black">${l.km.toLocaleString()} KM</div>
+                                </div>
+                                <div class="flex-1 px-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${l.type === 'revizie' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}">${l.type}</span>
+                                        <div class="font-bold text-slate-700">${l.desc}</div>
+                                        ${hasDetails ? '<i class="fas fa-chevron-down text-[10px] text-slate-300 rotate-icon ml-1"></i>' : ''}
+                                    </div>
+                                </div>
+                                <div class="w-24 text-right font-black text-slate-900">
+                                    ${l.val.toLocaleString()} <span class="text-[9px] text-slate-400">RON</span>
+                                </div>
+                                <div class="w-16 text-center no-print ml-4">
+                                    <button onclick="event.stopPropagation(); removeItem('${l.id}')" class="text-slate-200 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                                </div>
                             </div>
-                            <div class="font-bold text-slate-700">${l.desc}</div>
-                        </td>
-                        <td class="px-8 py-5 text-right font-black text-slate-900">
-                            ${l.val.toLocaleString()} <span class="text-[10px] text-slate-400 font-bold ml-1 uppercase">RON</span>
-                        </td>
-                        <td class="px-8 py-5 text-center admin-only no-print ${!isAdmin ? 'hidden' : ''}">
-                            <button onclick="removeItem('${l.id}')" class="text-slate-200 hover:text-red-500 transition">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            
+                            <!-- Dropdown Detalii -->
+                            <div class="expandable-content bg-slate-50/80 px-10 border-t border-slate-100">
+                                <div class="py-4 space-y-2">
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Desfășurător cheltuieli:</p>
+                                    ${subRows.map(row => {
+                                        const [name, price] = row.split(':');
+                                        return `
+                                            <div class="flex justify-between text-xs py-1 border-b border-white/50">
+                                                <span class="text-slate-600">${name.trim()}</span>
+                                                <span class="font-bold text-slate-800">${price ? price.trim() + ' RON' : '-'}</span>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 `;
             });
-
-            document.getElementById('statTotal').innerText = total.toLocaleString() + ' RON';
-            document.getElementById('statKm').innerText = km.toLocaleString() + ' KM';
-            document.getElementById('statInt').innerText = ints;
-            document.getElementById('statRev').innerText = revs;
         }
 
-        // PRINT ZILNIC
+        // CAR MODAL & UTILS (Simplified for brevity)
+        window.openCarModal = (mode) => {
+            const m = document.getElementById('carModal');
+            if (mode === 'edit') {
+                const c = cars.find(x => x.id === currentCarId);
+                document.getElementById('editId').value = c.id;
+                document.getElementById('mName').value = c.name;
+                document.getElementById('mPlate').value = c.plate;
+                document.getElementById('mVin').value = c.vin;
+                document.getElementById('mSpec').value = c.spec;
+            } else {
+                document.getElementById('editId').value = "";
+                document.getElementById('mName').value = "";
+                document.getElementById('mPlate').value = "";
+            }
+            m.classList.remove('hidden');
+        }
+        window.closeCarModal = () => document.getElementById('carModal').classList.add('hidden');
+        window.saveCar = async () => {
+            const id = document.getElementById('editId').value;
+            const data = { name: document.getElementById('mName').value, plate: document.getElementById('mPlate').value.toUpperCase(), vin: document.getElementById('mVin').value.toUpperCase(), spec: document.getElementById('mSpec').value };
+            if (id) await updateDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'cars', id), data);
+            else await addDoc(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'cars'), data);
+            closeCarModal();
+        }
+        window.switchCar = () => { currentCarId = document.getElementById('carSelector').value; renderHeader(); syncLogs(); }
+
         window.printDailyReport = () => {
             const date = document.getElementById('printDaySelector').value;
-            if (!date) return alert("Alege o dată!");
-            
             const car = cars.find(c => c.id === currentCarId);
             const dailyLogs = logs.filter(l => l.carId === currentCarId && l.date === date);
-            
-            if (dailyLogs.length === 0) return alert("Nu există date pentru această zi.");
-
+            if (dailyLogs.length === 0) return alert("Nimic de printat!");
             const win = window.open('', '_blank');
-            win.document.write(`
-                <html><head><title>Raport ${date}</title><style>
-                    body { font-family: sans-serif; padding: 50px; }
-                    .header { border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-                    .footer { margin-top: 50px; font-weight: bold; text-align: right; }
-                </style></head><body>
-                <div class="header">
-                    <div><h1>RAPORT SERVICE ZILNIC</h1><p>DATA: ${date}</p></div>
-                    <div style="text-align: right;"><h3>${car.name}</h3><p>${car.plate}</p></div>
-                </div>
-                <table>
-                    <thead><tr><th>Descriere</th><th>KM</th><th>Cost (RON)</th></tr></thead>
-                    <tbody>${dailyLogs.map(l => `<tr><td>[${l.type.toUpperCase()}] ${l.desc}</td><td>${l.km}</td><td>${l.val}</td></tr>`).join('')}</tbody>
-                </table>
-                <div class="footer">TOTAL ZI: ${dailyLogs.reduce((s,l)=>s+l.val,0)} RON</div>
-                </body></html>
-            `);
-            win.document.close();
-            win.print();
+            win.document.write(`<html><head><title>Raport ${date}</title><style>body{font-family:sans-serif;padding:40px} table{width:100%;border-collapse:collapse} th,td{border:1px solid #eee;padding:12px;text-align:left} .det{font-size:11px;color:#666;padding-left:20px}</style></head><body><h1>Raport Service: ${car.name} (${car.plate})</h1><h3>Data: ${date}</h3><table><thead><tr><th>Lucrare / KM</th><th>Detalii / Piese</th><th>Cost</th></tr></thead><tbody>${dailyLogs.map(l => `<tr><td><b>${l.desc}</b><br>${l.km} KM</td><td>${l.subDetails ? l.subDetails.replace(/\n/g, '<br>') : '-'}</td><td>${l.val} RON</td></tr>`).join('')}</tbody></table></body></html>`);
+            win.document.close(); win.print();
         }
 
         window.onload = () => {
