@@ -134,7 +134,7 @@
                     </form>
                 </div>
 
-                <!-- Raport Zilnic (Revenire) -->
+                <!-- Raport Zilnic -->
                 <div class="glass-card p-6 border-slate-800 bg-neutral-900/30">
                     <h2 class="text-[11px] font-black uppercase tracking-[0.2em] mb-4 text-slate-400">Raport Zilnic</h2>
                     <div class="space-y-3">
@@ -203,20 +203,17 @@
         let logs = [];
         let currentCarId = localStorage.getItem('lastCarId');
 
-        // Brand Logos Map
-        const getBrandLogo = (name) => {
-            const n = name.toLowerCase();
-            if (n.includes('vw') || n.includes('volk')) return 'https://www.vectorlogo.zone/logos/volkswagen/volkswagen-icon.svg';
-            if (n.includes('audi')) return 'https://www.vectorlogo.zone/logos/audi/audi-ar21.svg';
-            if (n.includes('bmw')) return 'https://www.vectorlogo.zone/logos/bmw/bmw-icon.svg';
-            if (n.includes('merc')) return 'https://www.vectorlogo.zone/logos/mercedesbenz/mercedesbenz-icon.svg';
-            if (n.includes('dacia')) return 'https://www.vectorlogo.zone/logos/dacia/dacia-ar21.svg';
-            if (n.includes('porsch')) return 'https://www.vectorlogo.zone/logos/porsche/porsche-icon.svg';
-            if (n.includes('ford')) return 'https://www.vectorlogo.zone/logos/ford/ford-icon.svg';
-            if (n.includes('toyot')) return 'https://www.vectorlogo.zone/logos/toyota/toyota-icon.svg';
-            if (n.includes('skoda')) return 'https://www.vectorlogo.zone/logos/skoda/skoda-icon.svg';
-            if (n.includes('seat')) return 'https://www.vectorlogo.zone/logos/seat/seat-icon.svg';
-            return null;
+        // SVG Icons instead of external image URLs to avoid broken links
+        const getCarIconSVG = () => {
+            return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-purple-500"><path d="M10 17h4V5H10v12zM2 17h4v2H2v-2zM18 17h4v2h-4v-2zM4 11V9c0-2.2 1.8-4 4-4h8c2.2 0 4 1.8 4 4v2"/><path d="M2 13h20M2 17h20M5 21h2M17 21h2"/></svg>`;
+        };
+
+        const getF1IconSVG = () => {
+            return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full text-purple-400 filter drop-shadow-[0_0_8px_rgba(147,51,234,0.5)]">
+                <path d="M2 16h4M18 16h4M5 16v2h2v-2M17 16v2h2v-2"/>
+                <path d="M7 16h10l1-4H6l1 4zM8 12l1-5h6l1 5M4 14h16M10 7V5h4v2"/>
+                <circle cx="6" cy="18" r="1.5"/><circle cx="18" cy="18" r="1.5"/>
+            </svg>`;
         };
 
         onAuthStateChanged(auth, (u) => {
@@ -243,7 +240,6 @@
         window.handleLogout = () => signOut(auth);
 
         function syncData() {
-            // Sincronizare masini
             onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'cars'), (snap) => {
                 cars = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 if (cars.length > 0) {
@@ -251,7 +247,6 @@
                         currentCarId = cars[0].id;
                     }
                     renderCarList();
-                    // Sincronizare LOGURI (acum inauntru pentru a asigura contextul masinii)
                     onSnapshot(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'logs'), (lSnap) => {
                         logs = lSnap.docs.map(ld => ({id: ld.id, ...ld.data()}));
                         renderLogs();
@@ -275,14 +270,13 @@
             const car = cars.find(c => c.id === currentCarId);
             if (!car) return;
 
-            const logo = getBrandLogo(car.name);
             localStorage.setItem('lastCarId', currentCarId);
 
             document.getElementById('carHero').innerHTML = `
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
                     <div class="flex items-center gap-6">
-                        <div class="w-24 h-24 bg-black rounded-2xl flex items-center justify-center p-4 border border-purple-900/30 shadow-2xl">
-                            ${logo ? `<img src="${logo}" class="w-full h-full object-contain filter brightness-125" onerror="this.innerHTML='<i class=\'fas fa-car text-3xl text-purple-600\'></i>'">` : `<i class="fas fa-car text-3xl text-purple-600"></i>`}
+                        <div class="w-24 h-24 bg-neutral-950 rounded-2xl flex items-center justify-center p-4 border border-purple-900/40 shadow-[0_0_30px_rgba(88,28,135,0.2)]">
+                            ${getF1IconSVG()}
                         </div>
                         <div>
                             <h2 class="text-4xl font-black italic tracking-tighter text-white uppercase">${car.name}</h2>
@@ -411,8 +405,6 @@
                 await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', user.uid, 'cars', currentCarId));
             }
         };
-
-        // --- SISTEM DE PRINT ---
 
         window.printFullReport = () => {
             const car = cars.find(c => c.id === currentCarId);
